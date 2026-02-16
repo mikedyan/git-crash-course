@@ -400,6 +400,11 @@
 
   @keyframes glow { 0%,100% { box-shadow: 0 0 5px rgba(0,245,255,0.2); } 50% { box-shadow: 0 0 20px rgba(0,245,255,0.4); } }
   @keyframes certBorderAnim { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+  @keyframes titleGlow { 0%,100% { text-shadow: 0 0 20px rgba(0,245,255,0.3), 0 0 60px rgba(0,245,255,0.1); } 50% { text-shadow: 0 0 30px rgba(0,245,255,0.5), 0 0 80px rgba(0,245,255,0.2), 0 0 120px rgba(0,245,255,0.05); } }
+  @keyframes titleLineGrow { from { width: 0; } to { width: 100%; } }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes floatParticle { 0% { transform: translateY(0) rotate(0deg); opacity: 0.15; } 50% { opacity: 0.3; } 100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; } }
+  .title-particle { position: absolute; border-radius: 2px; pointer-events: none; animation: floatParticle linear infinite; }
 </style>
 </head>
 <body>
@@ -421,21 +426,46 @@
 
 <!-- ===== SLIDE 0: Welcome ===== -->
 <div class="slide" id="s0">
-  <div style="display:flex;flex-direction:column;justify-content:center;min-height:calc(100vh - 140px);">
-    <h1>Git & GitHub</h1>
-    <p class="subtitle">An interactive masterclass &mdash; from snapshots to pull requests</p>
-    <div style="margin:24px 0;">
-      <p><strong>Git</strong> is a tool that saves every version of your project so you can go back in time, work with others, and never lose your work. <strong>GitHub</strong> is a website where people store and share their git projects online.</p>
-      <p style="margin-top:12px;">This is not a slideshow. It is a <strong>learning experience you interact with.</strong></p>
-      <ul style="margin-top:14px;">
-        <li>Drag files between git areas</li>
-        <li>Type real git commands in a simulated terminal</li>
-        <li>Resolve merge conflicts by editing code</li>
-        <li>Race against the clock in speed rounds</li>
-        <li>Hunt bugs with git bisect</li>
-      </ul>
+  <div style="position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:calc(100vh - 140px);text-align:center;overflow:hidden;">
+
+    <!-- Floating particles container -->
+    <div id="titleParticles" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
+
+    <!-- Content -->
+    <div style="position:relative;z-index:1;">
+
+      <!-- Small pre-title -->
+      <div style="font-size:12px;letter-spacing:6px;text-transform:uppercase;color:rgba(0,245,255,0.5);margin-bottom:16px;animation:fadeInUp 0.8s ease both;">AN INTERACTIVE LEARNING EXPERIENCE</div>
+
+      <!-- Main title -->
+      <div style="margin-bottom:8px;">
+        <span style="font-size:56px;font-weight:800;background:linear-gradient(135deg,var(--cyan) 0%,var(--purple) 40%,var(--gold) 70%,var(--cyan) 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:certBorderAnim 8s ease infinite,fadeInUp 1s ease both;display:inline-block;line-height:1.1;">Git Interactive<br>Masterclass</span>
+      </div>
+
+      <!-- Animated decorative line -->
+      <div style="display:flex;justify-content:center;margin:16px 0 20px;">
+        <div style="height:2px;width:200px;border-radius:1px;background:linear-gradient(90deg,transparent,var(--cyan),var(--purple),var(--gold),transparent);animation:fadeInUp 1.2s ease both;"></div>
+      </div>
+
+      <!-- Subtitle -->
+      <p style="font-size:17px;color:var(--text-dim);margin-bottom:28px;max-width:500px;line-height:1.6;animation:fadeInUp 1.4s ease both;">From snapshots to pull requests &mdash; learn git so deeply you could debug a broken rebase at 2am</p>
+
+      <!-- What you'll do -->
+      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:28px;animation:fadeInUp 1.6s ease both;">
+        <span style="padding:6px 14px;border:1px solid rgba(0,245,255,0.2);border-radius:20px;font-size:13px;color:var(--cyan);background:rgba(0,245,255,0.04);">Drag & drop</span>
+        <span style="padding:6px 14px;border:1px solid rgba(179,136,255,0.2);border-radius:20px;font-size:13px;color:var(--purple);background:rgba(179,136,255,0.04);">Terminal sandbox</span>
+        <span style="padding:6px 14px;border:1px solid rgba(255,215,0,0.2);border-radius:20px;font-size:13px;color:var(--gold);background:rgba(255,215,0,0.04);">Fix merge conflicts</span>
+        <span style="padding:6px 14px;border:1px solid rgba(255,107,53,0.2);border-radius:20px;font-size:13px;color:var(--ember);background:rgba(255,107,53,0.04);">Hunt bugs</span>
+        <span style="padding:6px 14px;border:1px solid rgba(126,184,160,0.2);border-radius:20px;font-size:13px;color:var(--green);background:rgba(126,184,160,0.04);">Speed rounds</span>
+      </div>
+
+      <!-- Start prompt -->
+      <div style="animation:fadeInUp 1.8s ease both;">
+        <button class="cmd-btn" onclick="goTo(1)" style="padding:12px 32px;font-size:16px;color:var(--cyan);border-color:var(--cyan);animation:glow 3s ease infinite;">Start Learning &rarr;</button>
+      </div>
+
+      <p style="color:#444;font-size:12px;margin-top:20px;animation:fadeInUp 2s ease both;">18 sections &middot; ~30 minutes &middot; No prior git knowledge assumed</p>
     </div>
-    <p class="dim">17 sections &middot; ~30 minutes &middot; No prior git knowledge assumed</p>
   </div>
 </div>
 
@@ -2865,6 +2895,26 @@ function downloadCert() {
   link.href = canvas.toDataURL('image/png');
   link.click();
 }
+
+// === Title Particles ===
+(function() {
+  var container = document.getElementById('titleParticles');
+  if (!container) return;
+  var colors = ['#00f5ff','#b388ff','#ffd700','#ff6b35','#7eb8a0'];
+  for (var i = 0; i < 30; i++) {
+    var p = document.createElement('div');
+    p.className = 'title-particle';
+    var size = 2 + Math.random() * 4;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.left = Math.random() * 100 + '%';
+    p.style.bottom = '-10px';
+    p.style.animationDuration = (8 + Math.random() * 12) + 's';
+    p.style.animationDelay = (Math.random() * 15) + 's';
+    container.appendChild(p);
+  }
+})();
 
 // === Init ===
 buildNav();

@@ -726,6 +726,34 @@
     <div class="box-label">The rule of thumb</div>
     <strong>Rebase your own local work before sharing it. Never rebase something that's already been pushed and shared.</strong> Think of it as editing a draft before publishing. Once it's published (pushed), don't change history &mdash; use merge instead.
   </div>
+
+  <h3 style="margin-top:28px;">Interactive Rebase &mdash; Full Walkthrough</h3>
+  <p>Let's do it for real. You've been working on a search feature for a week. Here's what your git log looks like &mdash; 14 commits of raw, messy progress:</p>
+
+  <div class="terminal" id="riTerminal">
+    <div class="terminal-bar">
+      <div class="terminal-dot r"></div><div class="terminal-dot y"></div><div class="terminal-dot g"></div>
+      <span style="margin-left:10px;font-size:11px;color:var(--text-dim);" id="riTermTitle">git log --oneline</span>
+    </div>
+    <div class="terminal-body" id="riTermBody" style="font-size:12px;line-height:1.8;"></div>
+  </div>
+
+  <div class="cmd-buttons" id="riBtns">
+    <button class="cmd-btn" id="ri-0" onclick="riStep(0)"><span class="cmd-step">1</span>See the messy log</button>
+    <button class="cmd-btn" id="ri-1" onclick="riStep(1)" disabled><span class="cmd-step">2</span>git rebase -i HEAD~14</button>
+    <button class="cmd-btn" id="ri-2" onclick="riStep(2)" disabled><span class="cmd-step">3</span>Mark commits</button>
+    <button class="cmd-btn" id="ri-3" onclick="riStep(3)" disabled><span class="cmd-step">4</span>Save & apply</button>
+    <button class="cmd-btn" id="ri-4" onclick="riStep(4)" disabled><span class="cmd-step">5</span>Write clean messages</button>
+    <button class="cmd-btn" id="ri-5" onclick="riStep(5)" disabled><span class="cmd-step">6</span>Push & create PR</button>
+  </div>
+
+  <div id="riExplain" style="margin-top:12px;font-size:14px;"><p class="dim">Click step 1 to see your messy commit history.</p></div>
+
+  <div id="riEditor" style="display:none;margin-top:16px;">
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:8px;">Click on <strong style="color:var(--cyan);">pick</strong> to cycle through actions: <span style="color:var(--green);">pick</span> (keep as-is) &rarr; <span style="color:var(--gold);">squash</span> (merge into commit above) &rarr; <span style="color:var(--red);">drop</span> (delete) &rarr; back to pick</p>
+    <div id="riLines" style="font-family:'SF Mono',monospace;font-size:12px;line-height:1.4;background:#000;border:1px solid var(--border);border-radius:8px;padding:14px;"></div>
+    <div id="riEditorHint" style="margin-top:8px;font-size:12px;color:var(--text-dim);"></div>
+  </div>
 </div>
 
 <!-- ===== SLIDE 8: Reset vs Revert (Consequence Chain) ===== -->
@@ -1710,6 +1738,168 @@ function rbExample(step) {
     rbExState = step;
     n.classList.add('done');
     addScore();
+  }
+}
+
+// === Slide 7: Interactive Rebase Walkthrough ===
+var riCommits = [
+  { hash: 'a1b2c3d', msg: 'Add user search endpoint', group: 1 },
+  { hash: 'b2c3d4e', msg: 'wip search stuff', group: 1 },
+  { hash: 'c3d4e5f', msg: 'fix typo in search query', group: 1 },
+  { hash: 'd4e5f6g', msg: 'oops forgot to save file', group: 1 },
+  { hash: 'e5f6g7h', msg: 'search actually works now', group: 1 },
+  { hash: 'f6g7h8i', msg: 'Add search filters - date, category', group: 2 },
+  { hash: 'g7h8i9j', msg: 'filter bug fix', group: 2 },
+  { hash: 'h8i9j0k', msg: 'more filter fixes', group: 2 },
+  { hash: 'i9j0k1l', msg: 'remove console.log', group: 2 },
+  { hash: 'j0k1l2m', msg: 'Add search tests', group: 3 },
+  { hash: 'k1l2m3n', msg: 'fix failing test', group: 3 },
+  { hash: 'l2m3n4o', msg: 'another test fix', group: 3 },
+  { hash: 'm3n4o5p', msg: 'add edge case tests', group: 3 },
+  { hash: 'n4o5p6q', msg: 'final test cleanup', group: 3 }
+];
+var riActions = [];
+var riState = -1;
+
+// The correct solution: pick first of each group, squash the rest
+var riCorrect = ['pick','squash','squash','squash','squash','pick','squash','squash','squash','pick','squash','squash','squash','squash'];
+
+var riCleanCommits = [
+  { hash: 'x7y8z9a', msg: 'Add user search endpoint' },
+  { hash: 'b1c2d3e', msg: 'Add search filters - date and category' },
+  { hash: 'f4g5h6i', msg: 'Add comprehensive search tests' }
+];
+
+function riStep(step) {
+  if (step !== riState + 1) return;
+  riState = step;
+  document.getElementById('ri-' + step).classList.add('done');
+  if (step < 5) document.getElementById('ri-' + (step + 1)).disabled = false;
+  var body = document.getElementById('riTermBody');
+  var exp = document.getElementById('riExplain');
+  var title = document.getElementById('riTermTitle');
+  addScore();
+
+  if (step === 0) {
+    // Show messy log
+    title.textContent = 'git log --oneline (newest first)';
+    var html = '';
+    for (var i = riCommits.length - 1; i >= 0; i--) {
+      var c = riCommits[i];
+      var msgCol = (c.msg.match(/^(wip|fix|oops|more|remove|another|final)/) ? 'var(--text-dim)' : 'var(--text)');
+      html += '<div><span class="t-hi">' + c.hash + '</span> <span style="color:' + msgCol + ';">' + c.msg + '</span></div>';
+    }
+    body.innerHTML = html;
+    exp.innerHTML = '<p>14 commits. "wip search stuff", "oops forgot to save file", "fix typo"... This is normal while working, but you don\'t want to submit a pull request with this history. Your reviewers would have to wade through the noise to understand what you actually built.</p>';
+  } else if (step === 1) {
+    // Show rebase -i editor
+    title.textContent = 'git rebase -i HEAD~14';
+    body.innerHTML = '<div class="t-out">Opens an editor with your 14 commits (oldest first).</div><div class="t-out">Each line starts with an <span class="t-acc">action</span> followed by the commit.</div><div class="t-out">Default action is "pick" (keep the commit as-is).</div>';
+    document.getElementById('riEditor').style.display = 'block';
+    riActions = riCommits.map(function() { return 'pick'; });
+    renderRiEditor(false);
+    exp.innerHTML = '<p>Git opens a text editor showing all 14 commits, oldest first. Each line starts with <strong style="color:var(--green);">pick</strong> &mdash; meaning "keep this commit." You can change the action on each line:</p><ul style="font-size:13px;margin-top:8px;"><li><strong style="color:var(--green);">pick</strong> &mdash; keep this commit as-is</li><li><strong style="color:var(--gold);">squash</strong> &mdash; merge this commit into the one above it (combines their changes)</li><li><strong style="color:var(--red);">drop</strong> &mdash; delete this commit entirely</li></ul>';
+  } else if (step === 2) {
+    // Enable clicking
+    renderRiEditor(true);
+    exp.innerHTML = '<p><strong>Now it\'s your turn.</strong> Click on the action word (pick/squash/drop) for each commit. The goal: keep the first commit of each logical group as <strong style="color:var(--green);">pick</strong>, and change the rest to <strong style="color:var(--gold);">squash</strong>. This will combine all the messy commits in each group into one clean commit.</p><p style="margin-top:8px;color:var(--text-dim);">Hint: commits 1-5 are about search, 6-9 are about filters, 10-14 are about tests. Pick the first of each group, squash the rest.</p>';
+    document.getElementById('riEditorHint').innerHTML = 'Click on <strong>pick</strong> to cycle: pick &rarr; squash &rarr; drop &rarr; pick';
+  } else if (step === 3) {
+    // Check and apply
+    var match = true;
+    for (var j = 0; j < riActions.length; j++) {
+      if (riActions[j] !== riCorrect[j]) { match = false; break; }
+    }
+    if (!match) {
+      // Auto-apply correct solution
+      riActions = riCorrect.slice();
+      renderRiEditor(false);
+    }
+    document.getElementById('riEditorHint').innerHTML = '';
+    title.textContent = 'Applying rebase...';
+    body.innerHTML = '<div class="t-grn">Successfully rebased and updated refs/heads/feature.</div><div class="t-out">14 commits squashed into 3.</div>';
+    exp.innerHTML = '<p>Git replays your commits, combining the squashed ones. When commits are squashed, their code changes are merged together into the commit above them. The "pick" commit absorbs all the "squash" commits below it.</p>';
+    addScore(2);
+  } else if (step === 4) {
+    // Show clean log
+    title.textContent = 'git log --oneline (after rebase)';
+    var cleanHtml = '';
+    for (var k = riCleanCommits.length - 1; k >= 0; k--) {
+      cleanHtml += '<div><span class="t-hi">' + riCleanCommits[k].hash + '</span> <span style="color:var(--green);">' + riCleanCommits[k].msg + '</span></div>';
+    }
+    body.innerHTML = cleanHtml;
+    document.getElementById('riEditor').style.display = 'none';
+    exp.innerHTML = '<p>14 messy commits became 3 clean ones. Each commit tells a clear story: what was built and why. Notice the <strong>hashes are completely new</strong> &mdash; these are fresh commits with the combined changes. The old 14 commits still exist in the reflog if you need them.</p>';
+  } else if (step === 5) {
+    // Push and create PR
+    title.textContent = '~/search-feature';
+    body.innerHTML = '<div><span class="t-prompt">$ </span><span class="t-cmd">git push origin feature</span></div>' +
+      '<div class="t-out">Enumerating objects: 12, done.</div>' +
+      '<div class="t-out">Counting objects: 100% (12/12), done.</div>' +
+      '<div class="t-grn">To github.com:you/project.git</div>' +
+      '<div class="t-grn"> * [new branch]      feature -> feature</div>' +
+      '<div></div>' +
+      '<div><span class="t-prompt">$ </span><span class="t-cmd">gh pr create --title "Add user search with filters" --body "..."</span></div>' +
+      '<div class="t-grn">Creating pull request for feature into main...</div>' +
+      '<div class="t-grn">https://github.com/you/project/pull/42</div>' +
+      '<div></div>' +
+      '<div class="t-out">Your reviewer sees:</div>' +
+      '<div>&nbsp;&nbsp;<span class="t-hi">f4g5h6i</span> <span style="color:var(--green);">Add comprehensive search tests</span></div>' +
+      '<div>&nbsp;&nbsp;<span class="t-hi">b1c2d3e</span> <span style="color:var(--green);">Add search filters - date and category</span></div>' +
+      '<div>&nbsp;&nbsp;<span class="t-hi">x7y8z9a</span> <span style="color:var(--green);">Add user search endpoint</span></div>' +
+      '<div></div>' +
+      '<div class="t-acc">Clean. Professional. Easy to review.</div>';
+    exp.innerHTML = '<p>Push your clean branch and create a pull request. Your reviewer sees 3 focused commits instead of 14 messy ones. Each commit can be reviewed independently, makes sense on its own, and can be easily reverted if needed. <strong>This is why teams use interactive rebase.</strong></p>';
+    addScore(2);
+  }
+}
+
+function renderRiEditor(interactive) {
+  var container = document.getElementById('riLines');
+  var html = '<div style="color:var(--text-dim);margin-bottom:8px;"># Rebase HEAD~14 onto abc1234 (14 commands)</div>';
+  var groupColors = { 1: '#1a3a2e', 2: '#2e2a1a', 3: '#1a2a3e' };
+  var lastGroup = 0;
+  for (var i = 0; i < riCommits.length; i++) {
+    var c = riCommits[i];
+    var action = riActions[i];
+    var actionCol = action === 'pick' ? 'var(--green)' : action === 'squash' ? 'var(--gold)' : 'var(--red)';
+    var bg = '';
+    if (c.group !== lastGroup) {
+      if (i > 0) html += '<div style="height:1px;background:var(--border);margin:4px 0;opacity:0.3;"></div>';
+      lastGroup = c.group;
+    }
+    var clickAttr = interactive ? ' onclick="riToggle(' + i + ')" style="cursor:pointer;padding:3px 6px;border-radius:4px;background:rgba(255,255,255,0.05);"' : ' style="padding:3px 6px;"';
+    html += '<div' + clickAttr + '>';
+    html += '<span style="color:' + actionCol + ';font-weight:700;">' + action + '</span> ';
+    html += '<span class="t-hi">' + c.hash + '</span> ';
+    html += '<span style="color:' + (action === 'drop' ? 'var(--text-dim);text-decoration:line-through' : 'var(--text)') + ';">' + c.msg + '</span>';
+    html += '</div>';
+  }
+  if (interactive) {
+    html += '<div style="color:var(--text-dim);margin-top:10px;"># pick = keep, squash = merge into above, drop = delete</div>';
+  }
+  container.innerHTML = html;
+}
+
+function riToggle(idx) {
+  var cycle = ['pick', 'squash', 'drop'];
+  var cur = cycle.indexOf(riActions[idx]);
+  riActions[idx] = cycle[(cur + 1) % 3];
+  renderRiEditor(true);
+
+  // Check if they got the correct answer
+  var match = true;
+  for (var j = 0; j < riActions.length; j++) {
+    if (riActions[j] !== riCorrect[j]) { match = false; break; }
+  }
+  var hint = document.getElementById('riEditorHint');
+  if (match) {
+    hint.innerHTML = '<span style="color:var(--green);">Perfect! Click "Save & apply" to continue.</span>';
+  } else {
+    // Count picks and squashes
+    var picks = riActions.filter(function(a) { return a === 'pick'; }).length;
+    var squashes = riActions.filter(function(a) { return a === 'squash'; }).length;
+    hint.innerHTML = 'Actions: <span style="color:var(--green);">' + picks + ' pick</span>, <span style="color:var(--gold);">' + squashes + ' squash</span>, <span style="color:var(--red);">' + riActions.filter(function(a) { return a === 'drop'; }).length + ' drop</span> &mdash; Goal: 3 picks, 11 squashes';
   }
 }
 

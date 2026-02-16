@@ -697,6 +697,35 @@
       </div>
     </div>
   </div>
+
+  <h3 style="margin-top:24px;">If merge is safer, why would anyone rebase?</h3>
+  <p>Good question. Here are three real scenarios where rebase is the better choice:</p>
+
+  <div style="margin-top:12px;">
+    <div class="step-row" onclick="rbExample(0)">
+      <div class="step-num" id="rb-ex-0">1</div>
+      <div><strong>Cleaning up before a pull request</strong>
+        <div class="step-detail" id="rb-ex-detail-0">You've been working on a feature branch for a week. You have 14 commits: "wip", "fix typo", "oops forgot file", "actually fix the bug", etc. Before asking your team to review this, you run <code>git rebase -i</code> (interactive rebase) to squash those 14 messy commits into 3 clean ones: "Add user search", "Add search filters", "Add search tests." Your reviewers see a clean story instead of your chaotic process. <strong>This is the #1 reason people rebase.</strong></div>
+      </div>
+    </div>
+    <div class="step-row" onclick="rbExample(1)">
+      <div class="step-num" id="rb-ex-1">2</div>
+      <div><strong>Staying up to date with main</strong>
+        <div class="step-detail" id="rb-ex-detail-1">You're working on a feature branch, but main keeps getting new commits from your teammates. If you <code>git merge main</code> into your branch every day, you end up with dozens of merge commits cluttering your branch's history. Instead, <code>git rebase main</code> replays your work on top of the latest main &mdash; as if you started your branch today. Your branch stays clean with only YOUR commits, and when you finally merge the feature into main, the history reads like a straight line.</div>
+      </div>
+    </div>
+    <div class="step-row" onclick="rbExample(2)">
+      <div class="step-num" id="rb-ex-2">3</div>
+      <div><strong>Open source contributions</strong>
+        <div class="step-detail" id="rb-ex-detail-2">You submit a pull request to a popular project. The maintainer says "looks good, but please rebase on latest main." Why? The project's main branch has moved forward since you started. If you merge, the project's git log gets a merge commit that says nothing useful. If you rebase, your commits sit neatly on top of the latest code, making the history easy to read and <code>git bisect</code> (bug hunting) easy to run. Most open source projects <strong>require</strong> rebased PRs for this reason.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="box insight" style="margin-top:16px;">
+    <div class="box-label">The rule of thumb</div>
+    <strong>Rebase your own local work before sharing it. Never rebase something that's already been pushed and shared.</strong> Think of it as editing a draft before publishing. Once it's published (pushed), don't change history &mdash; use merge instead.
+  </div>
 </div>
 
 <!-- ===== SLIDE 8: Reset vs Revert (Consequence Chain) ===== -->
@@ -1666,6 +1695,23 @@ function showRebaseView(mode) {
   if (!showRebaseView.scored) { showRebaseView.scored = true; addScore(); }
 }
 showRebaseView('merge');
+
+// Rebase examples (expandable)
+var rbExState = -1;
+function rbExample(step) {
+  var d = document.getElementById('rb-ex-detail-' + step);
+  var n = document.getElementById('rb-ex-' + step);
+  if (d.style.display === 'block') {
+    d.style.display = 'none';
+    return;
+  }
+  d.style.display = 'block';
+  if (step > rbExState) {
+    rbExState = step;
+    n.classList.add('done');
+    addScore();
+  }
+}
 
 function revealCard(el) {
   if (!el.classList.contains('revealed')) {

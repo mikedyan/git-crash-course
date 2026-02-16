@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Git & GitHub – Interactive Masterclass</title>
+<title>Git Interactive Crash Course</title>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -411,7 +411,7 @@
 
 <!-- Navigation -->
 <div class="nav">
-  <div class="nav-title"><strong>Git & GitHub</strong> &nbsp;Interactive Masterclass</div>
+  <div class="nav-title"><strong>Git</strong> &nbsp;Interactive Crash Course</div>
   <div class="nav-progress" id="navProgress"></div>
   <div class="nav-controls">
     <button class="nav-btn" id="prevBtn" onclick="navigate(-1)">Back</button>
@@ -439,7 +439,7 @@
 
       <!-- Main title -->
       <div style="margin-bottom:8px;">
-        <span style="font-size:56px;font-weight:800;background:linear-gradient(135deg,var(--cyan) 0%,var(--purple) 40%,var(--gold) 70%,var(--cyan) 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:certBorderAnim 8s ease infinite,fadeInUp 1s ease both;display:inline-block;line-height:1.1;">Git Interactive<br>Masterclass</span>
+        <span style="font-size:56px;font-weight:800;background:linear-gradient(135deg,var(--cyan) 0%,var(--purple) 40%,var(--gold) 70%,var(--cyan) 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:certBorderAnim 8s ease infinite,fadeInUp 1s ease both;display:inline-block;line-height:1.1;">Git Interactive<br>Crash Course</span>
       </div>
 
       <!-- Animated decorative line -->
@@ -1237,7 +1237,7 @@
 
   <div style="text-align:center;margin-bottom:20px;">
     <h2 style="margin:0;font-size:24px;">Congratulations!</h2>
-    <p style="color:var(--text-dim);margin:8px 0 0;">You've completed the Git Interactive Masterclass.</p>
+    <p style="color:var(--text-dim);margin:8px 0 0;">You've completed the Git Interactive Crash Course.</p>
   </div>
 
   <div id="certNamePrompt" style="text-align:center;margin-bottom:16px;">
@@ -1266,7 +1266,7 @@
           <!-- Top decorative line -->
           <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:22px;transform:translateZ(10px);">
             <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(0,245,255,0.4));"></div>
-            <div style="font-size:10px;letter-spacing:5px;color:var(--cyan);text-transform:uppercase;opacity:0.8;">Git Interactive Masterclass</div>
+            <div style="font-size:10px;letter-spacing:5px;color:var(--cyan);text-transform:uppercase;opacity:0.8;">Git Interactive Crash Course</div>
             <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(0,245,255,0.4),transparent);"></div>
           </div>
 
@@ -1281,7 +1281,7 @@
             <div id="certDisplayName" style="font-size:34px;font-weight:700;color:var(--cyan);min-height:48px;margin-bottom:6px;letter-spacing:0.5px;text-shadow:0 0 30px rgba(0,245,255,0.25),0 0 60px rgba(0,245,255,0.1);">&#8212;</div>
           </div>
 
-          <div style="font-size:14px;color:#888;line-height:1.7;margin-bottom:28px;transform:translateZ(15px);">has completed the Git Interactive Masterclass<br>and demonstrated understanding of Git version control</div>
+          <div style="font-size:14px;color:#888;line-height:1.7;margin-bottom:28px;transform:translateZ(15px);">has completed the Git Interactive Crash Course<br>and demonstrated understanding of Git version control</div>
 
           <!-- Score boxes -->
           <div style="display:flex;gap:16px;justify-content:center;margin-bottom:28px;transform:translateZ(25px);">
@@ -2816,7 +2816,7 @@ function downloadCert() {
 
   ctx.fillStyle = 'rgba(0,245,255,0.8)';
   ctx.font = '600 10px system-ui, -apple-system, sans-serif';
-  ctx.fillText('GIT  INTERACTIVE  MASTERCLASS', w / 2, 52);
+  ctx.fillText('GIT  INTERACTIVE  CRASH  COURSE', w / 2, 52);
 
   // Certificate of Completion (y=88)
   ctx.fillStyle = '#ffd700';
@@ -2842,7 +2842,7 @@ function downloadCert() {
   // Description (y=180, y=196)
   ctx.fillStyle = '#888';
   ctx.font = '400 13px system-ui, -apple-system, sans-serif';
-  ctx.fillText('has completed the Git Interactive Masterclass', w / 2, 184);
+  ctx.fillText('has completed the Git Interactive Crash Course', w / 2, 184);
   ctx.fillText('and demonstrated understanding of Git version control', w / 2, 202);
 
   // Score boxes (y=230)
@@ -2891,7 +2891,7 @@ function downloadCert() {
 
   // Download at 2x resolution
   var link = document.createElement('a');
-  link.download = 'Git-Masterclass-Certificate-' + name.replace(/[^a-zA-Z0-9]/g, '_') + '.png';
+  link.download = 'Git-Crash-Course-Certificate-' + name.replace(/[^a-zA-Z0-9]/g, '_') + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
 }

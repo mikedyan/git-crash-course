@@ -2674,6 +2674,11 @@ function animateConfetti(ctx, canvas) {
 }
 
 function initCertSlide() {
+  // Cache DOM refs for mouse handler
+  certCard = document.getElementById('certCard');
+  certShine = document.getElementById('certShine');
+  certGlare = document.getElementById('certGlare');
+  certSlide = document.getElementById('s18');
   // Set scores
   document.getElementById('certSpeedScore').textContent = speedCorrect + ' / ' + SPEED_COUNT;
   document.getElementById('certFinalScore').textContent = fqCorrect + ' / ' + FQ_TOTAL;
@@ -2690,65 +2695,51 @@ function updateCertName() {
   document.getElementById('certDisplayName').textContent = name || '\u2014';
 }
 
-// === Premium 3D holographic card effect ===
+// === Premium 3D holographic card effect (RAF-throttled) ===
 var certHovered = false;
+var certRafId = null;
+var certMx = 0, certMy = 0;
+var certCard = null, certShine = null, certGlare = null, certSlide = null;
 
-function certMouseMove(e) {
-  var card = document.getElementById('certCard');
-  if (!card) return;
-  var slide = card.closest('.slide');
-  if (!slide || !slide.classList.contains('active')) return;
+function certFrame() {
+  certRafId = null;
+  if (!certCard || !certSlide || !certSlide.classList.contains('active')) return;
 
-  var rect = card.getBoundingClientRect();
-  // Normalized -0.5 to 0.5
-  var nx = (e.clientX - rect.left) / rect.width - 0.5;
-  var ny = (e.clientY - rect.top) / rect.height - 0.5;
-  // Percentage 0-100
-  var px = (e.clientX - rect.left) / rect.width * 100;
-  var py = (e.clientY - rect.top) / rect.height * 100;
-
-  // Check if mouse is over card area (with some margin)
-  var isOver = e.clientX >= rect.left - 40 && e.clientX <= rect.right + 40 &&
-               e.clientY >= rect.top - 40 && e.clientY <= rect.bottom + 40;
+  var rect = certCard.getBoundingClientRect();
+  var nx = (certMx - rect.left) / rect.width - 0.5;
+  var ny = (certMy - rect.top) / rect.height - 0.5;
+  var px = (certMx - rect.left) / rect.width * 100;
+  var py = (certMy - rect.top) / rect.height * 100;
+  var isOver = certMx >= rect.left - 40 && certMx <= rect.right + 40 &&
+               certMy >= rect.top - 40 && certMy <= rect.bottom + 40;
 
   if (!isOver) {
-    if (certHovered) certMouseLeave();
+    if (certHovered) certReset();
     return;
   }
-
   if (!certHovered) {
     certHovered = true;
-    document.getElementById('certShine').style.opacity = '1';
-    document.getElementById('certGlare').style.opacity = '1';
+    certShine.style.opacity = '1';
+    certGlare.style.opacity = '1';
   }
-
-  // 3D tilt: rotateY from horizontal, rotateX from vertical (inverted)
-  var maxTilt = 12;
-  var rotY = nx * maxTilt * 2;
-  var rotX = -ny * maxTilt * 2;
-  card.style.transform = 'rotateX(' + rotX.toFixed(2) + 'deg) rotateY(' + rotY.toFixed(2) + 'deg) scale3d(1.03,1.03,1.03)';
-
-  // Rainbow shine follows mouse (move the gradient)
-  var shine = document.getElementById('certShine');
-  shine.style.backgroundPosition = (50 + nx * 80).toFixed(1) + '% ' + (50 + ny * 80).toFixed(1) + '%';
-
-  // Glare spotlight tracks mouse exactly
-  var glare = document.getElementById('certGlare');
-  glare.style.background = 'radial-gradient(farthest-corner circle at ' + px.toFixed(1) + '% ' + py.toFixed(1) + '%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 25%, transparent 65%)';
+  certCard.style.transform = 'rotateX(' + (-ny * 24) + 'deg) rotateY(' + (nx * 24) + 'deg) scale3d(1.03,1.03,1.03)';
+  certShine.style.backgroundPosition = (50 + nx * 80) + '% ' + (50 + ny * 80) + '%';
+  certGlare.style.background = 'radial-gradient(farthest-corner circle at ' + px + '% ' + py + '%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 25%, transparent 65%)';
 }
 
-function certMouseLeave() {
+function certReset() {
   certHovered = false;
-  var card = document.getElementById('certCard');
-  if (card) card.style.transform = 'rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
-  var shine = document.getElementById('certShine');
-  if (shine) shine.style.opacity = '0';
-  var glare = document.getElementById('certGlare');
-  if (glare) glare.style.opacity = '0';
+  if (certCard) certCard.style.transform = 'rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
+  if (certShine) certShine.style.opacity = '0';
+  if (certGlare) certGlare.style.opacity = '0';
 }
 
-document.addEventListener('mousemove', certMouseMove);
-document.addEventListener('mouseleave', certMouseLeave);
+document.addEventListener('mousemove', function(e) {
+  certMx = e.clientX;
+  certMy = e.clientY;
+  if (!certRafId) certRafId = requestAnimationFrame(certFrame);
+});
+document.addEventListener('mouseleave', certReset);
 
 function downloadCert() {
   var name = document.getElementById('certNameInput').value.trim() || 'Graduate';

@@ -670,9 +670,9 @@
     <button class="cmd-btn" id="rbRebaseBtn" onclick="showRebaseView('rebase')" style="padding:10px 20px;">Rebase</button>
   </div>
 
-  <div class="diagram" id="rebaseDiagram" style="min-height:140px;">
-    <pre id="rebaseArt" style="font-family:'SF Mono',monospace;font-size:14px;text-align:left;display:inline-block;line-height:1.8;"></pre>
-    <div class="diagram-caption" id="rebaseCaption"></div>
+  <div class="git-graph" id="rebaseDiagram" style="min-height:180px;">
+    <svg viewBox="0 0 800 200" id="rebaseSvg"></svg>
+    <div class="diagram-caption" id="rebaseCaption" style="margin-top:8px;"></div>
   </div>
 
   <div id="rebaseExplain" style="font-size:14px;margin-top:12px;"></div>
@@ -1594,29 +1594,74 @@ function resetConflict() {
 }
 
 // === Slide 7: Rebase vs Merge Toggle ===
+function drawRebaseSvg(mode) {
+  var svg = document.getElementById('rebaseSvg');
+  var h = '';
+  var cm = '#7eb8a0', cf = '#ff6b35', cc = '#00f5ff', cd = '#7a7a9e';
+  var ym = 70, yf = 140;
+
+  function node(id, x, y, col) {
+    h += '<circle cx="' + x + '" cy="' + y + '" r="18" fill="' + col + '" opacity="0.2" stroke="' + col + '" stroke-width="2"/>';
+    h += '<text x="' + x + '" y="' + (y + 5) + '" text-anchor="middle" fill="white" font-family="SF Mono,monospace" font-size="14" font-weight="bold">' + id + '</text>';
+  }
+  function line(x1, y1, x2, y2, col, dashed) {
+    h += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + col + '" stroke-width="2" opacity="0.5"' + (dashed ? ' stroke-dasharray="6,3"' : '') + '/>';
+  }
+  function label(text, x, y, col) {
+    h += '<text x="' + x + '" y="' + y + '" text-anchor="middle" fill="' + col + '" font-family="SF Mono,monospace" font-size="12" font-weight="bold">' + text + '</text>';
+  }
+
+  if (mode === 'merge') {
+    // A-B-C on main, D-E on feature branching from C, F on main, G merge commit
+    line(80, ym, 180, ym, cm); line(180, ym, 280, ym, cm); line(280, ym, 440, ym, cm); line(440, ym, 560, ym, cc);
+    line(280, ym, 360, yf, cf); line(360, yf, 460, yf, cf); line(460, yf, 560, ym, cc, true);
+    node('A', 80, ym, cm); node('B', 180, ym, cm); node('C', 280, ym, cm);
+    node('D', 360, yf, cf); node('E', 460, yf, cf);
+    node('F', 440, ym, cm); node('G', 560, ym, cc);
+    label('main', 560, ym - 30, cm); label('feature', 460, yf + 38, cf);
+    label('merge commit', 560, ym + 40, cc);
+  } else {
+    // Before: A-B-C-F on main, D-E branching from C (dimmed)
+    // After: A-B-C-F-D'-E' all on one line
+    line(80, ym, 180, ym, cd); line(180, ym, 280, ym, cd); line(280, ym, 380, ym, cd);
+    line(280, ym, 340, yf, cd); line(340, yf, 420, yf, cd);
+    node('A', 80, ym, cd); node('B', 180, ym, cd); node('C', 280, ym, cd);
+    node('D', 340, yf, cd); node('E', 420, yf, cd);
+    node('F', 380, ym, cd);
+    // Strikethrough on old D and E
+    h += '<line x1="322" y1="' + (yf - 10) + '" x2="358" y2="' + (yf + 10) + '" stroke="#ff3b5c" stroke-width="2" opacity="0.6"/>';
+    h += '<line x1="402" y1="' + (yf - 10) + '" x2="438" y2="' + (yf + 10) + '" stroke="#ff3b5c" stroke-width="2" opacity="0.6"/>';
+    // After line: F -> D' -> E'
+    line(380, ym, 500, ym, cc); line(500, ym, 620, ym, cc);
+    node("D'", 500, ym, cc); node("E'", 620, ym, cc);
+    label('main', 380, ym - 30, cm); label('feature', 620, ym - 30, cf);
+    label('before', 420, yf + 38, cd); label('after (rebased)', 560, ym + 40, cc);
+  }
+  svg.innerHTML = h;
+}
+
 function showRebaseView(mode) {
-  const art = document.getElementById('rebaseArt');
-  const cap = document.getElementById('rebaseCaption');
-  const exp = document.getElementById('rebaseExplain');
-  const mergeBtn = document.getElementById('rbMergeBtn');
-  const rebaseBtn = document.getElementById('rbRebaseBtn');
+  var cap = document.getElementById('rebaseCaption');
+  var exp = document.getElementById('rebaseExplain');
+  var mergeBtn = document.getElementById('rbMergeBtn');
+  var rebaseBtn = document.getElementById('rbRebaseBtn');
+
+  drawRebaseSvg(mode);
 
   if (mode === 'merge') {
     mergeBtn.style.borderColor = 'var(--green)';
     mergeBtn.style.color = 'var(--green)';
     rebaseBtn.style.borderColor = 'var(--border)';
     rebaseBtn.style.color = 'var(--cyan)';
-    art.innerHTML = '<span style="color:var(--green);">main</span>:    <span style="color:var(--text-dim);">A \u2014 B \u2014 C \u2014\u2014\u2014 F \u2014</span> <span style="color:var(--cyan);">G</span> <span class="dim">(merge commit)</span>\n                    <span style="color:var(--text-dim);">\\          /</span>\n<span style="color:var(--ember);">feature</span>:          <span style="color:var(--text-dim);">D \u2014 E</span>';
     cap.textContent = 'Merge creates commit G with TWO parents. History shows the branch existed.';
-    exp.innerHTML = '<p>The merge commit <strong>G</strong> ties both histories together. Nothing is rewritten &mdash; D and E keep their original hashes. This is the <strong>safe</strong> option.</p>';
+    exp.innerHTML = '<p>The merge commit <strong>G</strong> ties both histories together. Nothing is rewritten &mdash; D and E keep their original IDs. This is the <strong>safe</strong> option.</p>';
   } else {
     rebaseBtn.style.borderColor = 'var(--ember)';
     rebaseBtn.style.color = 'var(--ember)';
     mergeBtn.style.borderColor = 'var(--border)';
     mergeBtn.style.color = 'var(--cyan)';
-    art.innerHTML = '<span class="dim">Before:</span>  <span style="color:var(--text-dim);">A \u2014 B \u2014 C \u2014 F</span>  <span style="color:var(--green);">(main)</span>\n                    <span style="color:var(--text-dim);">\\</span>\n                     <span style="color:var(--text-dim);">D \u2014 E</span>  <span style="color:var(--ember);">(feature)</span>\n\n<span class="dim">After:</span>   <span style="color:var(--text-dim);">A \u2014 B \u2014 C \u2014 F \u2014</span> <span style="color:var(--cyan);">D\' \u2014 E\'</span>  <span style="color:var(--ember);">(feature)</span>';
-    cap.textContent = 'Rebase REPLAYS your commits on top of main. D\' and E\' are NEW commits (same changes, new hashes).';
-    exp.innerHTML = '<p>D and E are <strong>recreated</strong> as D\' and E\' &mdash; same changes, but placed after F instead of after C. Since their position in history changed, they get new IDs (hashes). The originals still exist in git\'s safety log (reflog) but are no longer visible. This gives <strong>clean linear history</strong> but changes the commit IDs, which can confuse teammates if they had the old versions.</p>';
+    cap.textContent = 'Rebase REPLAYS your commits on top of main. D\' and E\' are NEW commits (same changes, new IDs).';
+    exp.innerHTML = '<p>D and E are <strong>recreated</strong> as D\' and E\' &mdash; same changes, but placed after F instead of after C. Since their position in history changed, they get new IDs. The originals (crossed out) still exist in git\'s safety log (reflog) but are no longer visible. This gives <strong>clean linear history</strong> but changes the commit IDs, which can confuse teammates if they had the old versions.</p>';
   }
   if (!showRebaseView.scored) { showRebaseView.scored = true; addScore(); }
 }

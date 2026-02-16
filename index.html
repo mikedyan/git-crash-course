@@ -1080,26 +1080,23 @@
 <!-- ===== SLIDE 16: Speed Round ===== -->
 <div class="slide" id="s16">
   <h2>16. Speed Round</h2>
-  <p>Test your knowledge under pressure. <strong>8 seconds per question.</strong></p>
+  <p>Test your knowledge under pressure. <strong>15 seconds per question. 10 random questions.</strong> Questions are shuffled each time you play.</p>
 
-  <div style="text-align:center;margin:20px 0;">
-    <div class="speed-timer" id="speedTimer">8.0</div>
-    <div style="margin-top:8px;font-size:14px;" id="speedProgress">Question <span id="speedQNum">0</span> of 10</div>
-    <div style="margin-top:4px;font-size:20px;font-weight:700;" id="speedScore">Score: 0</div>
+  <div id="speedQuizArea">
+    <div style="text-align:center;margin:20px 0;">
+      <div class="speed-timer" id="speedTimer"></div>
+      <div style="margin-top:8px;font-size:14px;" id="speedProgress"></div>
+      <div style="margin-top:4px;font-size:20px;font-weight:700;" id="speedScore"></div>
+    </div>
+    <div id="speedQuestion" style="font-size:18px;font-weight:600;text-align:center;margin:16px 0;min-height:28px;"></div>
+    <div class="speed-options" id="speedOptions"></div>
   </div>
-
-  <div id="speedQuestion" style="font-size:18px;font-weight:600;text-align:center;margin:16px 0;min-height:28px;"></div>
-
-  <div class="speed-options" id="speedOptions"></div>
 
   <div style="text-align:center;margin-top:16px;">
     <button class="cmd-btn" id="speedStartBtn" onclick="startSpeed()" style="padding:12px 32px;font-size:16px;">Start Speed Round</button>
   </div>
 
-  <div id="speedFinal" style="display:none;text-align:center;margin-top:20px;">
-    <div style="font-size:36px;font-weight:700;" id="speedFinalScore"></div>
-    <div style="color:var(--text-dim);margin-top:8px;" id="speedFinalMsg"></div>
-  </div>
+  <div id="speedReview" style="display:none;"></div>
 </div>
 
 <!-- ===== SLIDE 17: Final Assessment ===== -->
@@ -2278,95 +2275,184 @@ function pipeStage(i) {
 }
 
 // === Slide 16: Speed Round ===
-const speedQuestions = [
-  { q: 'Move a file to the staging area?', opts: ['git add', 'git push', 'git stage', 'git move'], correct: 0 },
-  { q: 'Create a new branch?', opts: ['git new branch', 'git branch <name>', 'git create branch', 'git fork'], correct: 1 },
-  { q: 'See commit history?', opts: ['git history', 'git show', 'git log', 'git commits'], correct: 2 },
-  { q: 'Undo a commit safely on shared branch?', opts: ['git reset', 'git undo', 'git delete', 'git revert'], correct: 3 },
-  { q: 'Save uncommitted work temporarily?', opts: ['git save', 'git stash', 'git hold', 'git park'], correct: 1 },
-  { q: 'Download remote changes without merging?', opts: ['git pull', 'git clone', 'git fetch', 'git download'], correct: 2 },
-  { q: 'What is HEAD?', opts: ['The latest commit', 'Pointer to current branch', 'The main branch', 'The remote'], correct: 1 },
-  { q: 'Find which commit introduced a bug?', opts: ['git blame', 'git find', 'git bisect', 'git search'], correct: 2 },
-  { q: 'A branch is physically a...', opts: ['Folder copy', 'Compressed archive', 'Text file with hash', 'Database entry'], correct: 2 },
-  { q: 'Combine two branches?', opts: ['git combine', 'git merge', 'git join', 'git connect'], correct: 1 },
+var speedPool = [
+  { q: 'Move a file to the staging area?', opts: ['git add', 'git push', 'git stage', 'git move'], correct: 0,
+    explain: 'git add moves changes from your working directory into the staging area, preparing them to be included in the next commit.' },
+  { q: 'Create a new branch?', opts: ['git new branch', 'git branch <name>', 'git create branch', 'git fork'], correct: 1,
+    explain: 'git branch <name> creates a new branch pointer at your current commit. It\'s just a 41-byte file containing a commit hash.' },
+  { q: 'See commit history?', opts: ['git history', 'git show', 'git log', 'git commits'], correct: 2,
+    explain: 'git log walks the commit chain starting from HEAD, showing each commit\'s hash, author, date, and message.' },
+  { q: 'Undo a commit safely on a shared branch?', opts: ['git reset', 'git undo', 'git delete', 'git revert'], correct: 3,
+    explain: 'git revert creates a NEW commit that undoes the changes. Unlike reset, it doesn\'t rewrite history, so it\'s safe for branches others are using.' },
+  { q: 'Save uncommitted work temporarily?', opts: ['git save', 'git stash', 'git hold', 'git park'], correct: 1,
+    explain: 'git stash saves your uncommitted changes to a stack and reverts your working directory to the last commit. Pop them back later with git stash pop.' },
+  { q: 'Download remote changes without merging?', opts: ['git pull', 'git clone', 'git fetch', 'git download'], correct: 2,
+    explain: 'git fetch downloads new commits from the remote but doesn\'t touch your working directory or current branch. You decide when to merge.' },
+  { q: 'What is HEAD?', opts: ['The latest commit', 'Pointer to current branch', 'The main branch', 'The remote server'], correct: 1,
+    explain: 'HEAD is a pointer to whichever branch you currently have checked out. It\'s a file (.git/HEAD) containing something like "ref: refs/heads/main".' },
+  { q: 'Find which commit introduced a bug?', opts: ['git blame', 'git find', 'git bisect', 'git search'], correct: 2,
+    explain: 'git bisect does a binary search through your commit history. You mark commits as good/bad and it narrows down to the exact commit that introduced the bug.' },
+  { q: 'A branch is physically a...', opts: ['Folder copy', 'Compressed archive', 'Text file with a hash', 'Database entry'], correct: 2,
+    explain: 'A branch is just a tiny text file in .git/refs/heads/ containing the 40-character SHA-1 hash of the commit it points to. That\'s why creating branches is instant.' },
+  { q: 'Combine two branches?', opts: ['git combine', 'git merge', 'git join', 'git connect'], correct: 1,
+    explain: 'git merge takes changes from one branch and integrates them into another. It creates a merge commit with two parents if the branches diverged.' },
+  { q: 'What does git clone do?', opts: ['Downloads only the latest version', 'Copies entire repo with full history', 'Creates a branch', 'Syncs two repos'], correct: 1,
+    explain: 'git clone copies the ENTIRE repository including every commit, branch, and tag. You get a fully independent copy with complete history.' },
+  { q: 'What does .gitignore do?', opts: ['Deletes files', 'Hides files from your OS', 'Tells git which files to skip', 'Encrypts sensitive files'], correct: 2,
+    explain: '.gitignore is a text file listing patterns of files git should never track. Useful for build artifacts, secrets, and OS files like .DS_Store.' },
+  { q: 'What is a merge conflict?', opts: ['A broken repository', 'Same lines changed in both branches', 'An authentication error', 'Two branches with same name'], correct: 1,
+    explain: 'A merge conflict happens when both branches modified the same lines in the same file. Git can\'t decide which version to keep, so you resolve it manually.' },
+  { q: 'What does git diff show?', opts: ['Commit history', 'Unstaged changes', 'Remote branches', 'Deleted files only'], correct: 1,
+    explain: 'git diff shows line-by-line changes in your working directory that haven\'t been staged yet. Use git diff --staged to see what\'s already staged.' },
+  { q: 'What is a "remote"?', opts: ['A backup drive', 'A nickname for a URL to another repo', 'A type of branch', 'A cloud server'], correct: 1,
+    explain: 'A remote is a shortname (like "origin") mapped to a URL where another copy of the repository lives. It\'s stored in .git/config.' },
+  { q: 'git pull is shorthand for...', opts: ['git clone + git push', 'git fetch + git merge', 'git add + git commit', 'git stash + git pull'], correct: 1,
+    explain: 'git pull = git fetch (download changes) + git merge (integrate them). That\'s why some people prefer doing fetch and merge separately for more control.' },
+  { q: 'What does git blame show?', opts: ['Errors in code', 'Who last changed each line', 'Merge conflicts', 'Uncommitted changes'], correct: 1,
+    explain: 'git blame annotates each line of a file with the commit hash, author, and date of the last change. Great for understanding who wrote what and when.' },
+  { q: 'Fast-forward merge means...', opts: ['A faster algorithm', 'Branch pointer moves forward, no merge commit', 'Skipping code review', 'Merging without conflicts'], correct: 1,
+    explain: 'A fast-forward happens when the target branch has no new commits since the source branched off. Git just moves the pointer forward \u2014 no merge commit needed.' },
+  { q: 'Interactive rebase lets you...', opts: ['Merge branches interactively', 'Reorder, squash, or drop commits', 'Chat with collaborators', 'Preview merge conflicts'], correct: 1,
+    explain: 'git rebase -i opens an editor where you can pick, squash, reword, or drop commits. Perfect for cleaning up messy commit history before sharing.' },
+  { q: 'What does git push -u do?', opts: ['Force pushes', 'Pushes and sets upstream tracking', 'Pushes to all remotes', 'Pushes unsigned commits'], correct: 1,
+    explain: 'The -u flag sets the upstream tracking branch, so future git push and git pull commands know where to go without you specifying the remote and branch.' },
+  { q: 'What does a commit object store?', opts: ['Just the changed files', 'A snapshot of all tracked files + metadata', 'Only the diff from previous commit', 'A compressed zip of the repo'], correct: 1,
+    explain: 'A commit stores a pointer to a tree object (snapshot of ALL files), author info, timestamp, message, and parent commit hash(es). It\'s a full snapshot, not a diff.' },
+  { q: 'What is the staging area for?', opts: ['Storing backups', 'Choosing exactly which changes go in the next commit', 'Running tests before push', 'Resolving merge conflicts'], correct: 1,
+    explain: 'The staging area lets you selectively prepare changes. You might have 5 modified files but only stage 2 for a focused commit. It\'s your commit drafting zone.' },
+  { q: 'What are the 4 object types in git?', opts: ['file, folder, commit, branch', 'blob, tree, commit, tag', 'add, commit, push, pull', 'source, build, test, deploy'], correct: 1,
+    explain: 'Everything in git\'s object database is one of 4 types: blob (file content), tree (directory listing), commit (snapshot + metadata), and tag (named reference to a commit).' },
+  { q: 'git reset --hard will...', opts: ['Undo last push', 'Discard all uncommitted changes', 'Delete the repository', 'Reset remote to match local'], correct: 1,
+    explain: 'git reset --hard moves HEAD and your branch pointer, AND overwrites your working directory and staging area. Any uncommitted work is gone permanently.' },
+  { q: 'What makes a merge commit special?', opts: ['It\'s larger than normal commits', 'It has two parent commits', 'It can\'t be reverted', 'It requires approval'], correct: 1,
+    explain: 'A merge commit has TWO parent hashes instead of one, recording exactly which two lines of development were combined. This preserves the full branch topology.' }
 ];
-let speedIdx = -1, speedCorrect = 0, speedTimerId = null, speedTime = 0;
+var SPEED_COUNT = 10;
+var SPEED_TIME = 15;
+var speedQuestions = [], speedIdx = -1, speedCorrect = 0, speedTimerId = null, speedTime = 0;
+var speedAnswers = []; // tracks {qIdx, chosen, correct, timedOut}
+
+function shuffleArray(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+  return arr;
+}
 
 function startSpeed() {
   document.getElementById('speedStartBtn').style.display = 'none';
-  document.getElementById('speedFinal').style.display = 'none';
-  speedIdx = -1; speedCorrect = 0;
+  document.getElementById('speedReview').style.display = 'none';
+  document.getElementById('speedQuizArea').style.display = 'block';
+  // Pick 10 random questions from pool
+  var indices = [];
+  for (var i = 0; i < speedPool.length; i++) indices.push(i);
+  shuffleArray(indices);
+  speedQuestions = [];
+  for (var i = 0; i < SPEED_COUNT; i++) speedQuestions.push(speedPool[indices[i]]);
+  speedIdx = -1; speedCorrect = 0; speedAnswers = [];
+  document.getElementById('speedScore').textContent = 'Score: 0';
   nextSpeedQ();
 }
 
 function nextSpeedQ() {
   speedIdx++;
-  if (speedIdx >= speedQuestions.length) {
-    endSpeed();
-    return;
-  }
-  const q = speedQuestions[speedIdx];
-  document.getElementById('speedQNum').textContent = speedIdx + 1;
+  if (speedIdx >= speedQuestions.length) { endSpeed(); return; }
+  var q = speedQuestions[speedIdx];
+  document.getElementById('speedProgress').textContent = 'Question ' + (speedIdx + 1) + ' of ' + SPEED_COUNT;
   document.getElementById('speedQuestion').textContent = q.q;
-  const opts = document.getElementById('speedOptions');
+  var opts = document.getElementById('speedOptions');
   opts.innerHTML = '';
-  q.opts.forEach((o, i) => {
-    const btn = document.createElement('button');
+  q.opts.forEach(function(o, i) {
+    var btn = document.createElement('button');
     btn.className = 'speed-opt';
     btn.textContent = o;
-    btn.onclick = () => answerSpeed(i);
+    btn.onclick = function() { answerSpeed(i); };
     opts.appendChild(btn);
   });
-  speedTime = 8.0;
+  speedTime = SPEED_TIME;
   updateSpeedTimer();
-  speedTimerId = setInterval(() => {
+  speedTimerId = setInterval(function() {
     speedTime -= 0.1;
     if (speedTime <= 0) {
       clearInterval(speedTimerId);
       speedTime = 0;
-      answerSpeed(-1); // timeout
+      answerSpeed(-1);
     }
     updateSpeedTimer();
   }, 100);
 }
 
 function updateSpeedTimer() {
-  const el = document.getElementById('speedTimer');
+  var el = document.getElementById('speedTimer');
   el.textContent = Math.max(0, speedTime).toFixed(1);
-  el.className = 'speed-timer' + (speedTime <= 2 ? ' urgent' : '');
+  el.className = 'speed-timer' + (speedTime <= 3 ? ' urgent' : '');
 }
 
 function answerSpeed(choice) {
   clearInterval(speedTimerId);
-  const q = speedQuestions[speedIdx];
-  const opts = document.getElementById('speedOptions').children;
-  for (let i = 0; i < opts.length; i++) {
+  var q = speedQuestions[speedIdx];
+  var opts = document.getElementById('speedOptions').children;
+  for (var i = 0; i < opts.length; i++) {
     opts[i].disabled = true;
     if (i === q.correct) opts[i].classList.add('correct');
     if (i === choice && choice !== q.correct) opts[i].classList.add('wrong');
   }
-  if (choice === q.correct) {
-    speedCorrect++;
-    addScore();
-  }
+  var isCorrect = choice === q.correct;
+  if (isCorrect) { speedCorrect++; addScore(); }
+  speedAnswers.push({ qIdx: speedIdx, chosen: choice, correct: q.correct, timedOut: choice === -1, wasCorrect: isCorrect });
   document.getElementById('speedScore').textContent = 'Score: ' + speedCorrect;
   setTimeout(nextSpeedQ, 800);
 }
 
 function endSpeed() {
-  document.getElementById('speedQuestion').textContent = '';
-  document.getElementById('speedOptions').innerHTML = '';
-  document.getElementById('speedTimer').textContent = '';
-  document.getElementById('speedProgress').textContent = '';
-  const final = document.getElementById('speedFinal');
-  final.style.display = 'block';
-  document.getElementById('speedFinalScore').textContent = speedCorrect + ' / ' + speedQuestions.length;
-  const pct = Math.round(speedCorrect / speedQuestions.length * 100);
-  if (pct === 100) document.getElementById('speedFinalMsg').textContent = 'Flawless. You know git inside and out.';
-  else if (pct >= 70) document.getElementById('speedFinalMsg').textContent = 'Solid! Review the ones you missed.';
-  else document.getElementById('speedFinalMsg').textContent = 'Worth revisiting some sections. The concepts build on each other.';
+  document.getElementById('speedQuizArea').style.display = 'none';
+  var pct = Math.round(speedCorrect / SPEED_COUNT * 100);
+  var msg = '';
+  if (pct === 100) msg = 'Flawless. You know git inside and out.';
+  else if (pct >= 80) msg = 'Solid work! Check the ones you missed below.';
+  else if (pct >= 50) msg = 'Good start. Review the explanations below to fill the gaps.';
+  else msg = 'Worth revisiting some earlier sections. The explanations below will help.';
+
+  var html = '<div style="text-align:center;margin:20px 0;">';
+  html += '<div style="font-size:36px;font-weight:700;">' + speedCorrect + ' / ' + SPEED_COUNT + '</div>';
+  html += '<div style="color:var(--text-dim);margin-top:4px;">' + msg + '</div>';
+  html += '</div>';
+  html += '<div style="margin-top:20px;">';
+  for (var i = 0; i < speedAnswers.length; i++) {
+    var a = speedAnswers[i];
+    var q = speedQuestions[a.qIdx];
+    var borderColor = a.wasCorrect ? 'var(--green)' : 'var(--red)';
+    var icon = a.wasCorrect ? '\u2713' : '\u2717';
+    var iconColor = a.wasCorrect ? 'var(--green)' : 'var(--red)';
+    html += '<div style="border:1px solid ' + borderColor + ';border-radius:8px;padding:12px 14px;margin-bottom:10px;background:' + (a.wasCorrect ? 'rgba(126,184,160,0.05)' : 'rgba(255,59,92,0.05)') + ';">';
+    html += '<div style="font-weight:600;margin-bottom:8px;"><span style="color:' + iconColor + ';margin-right:6px;">' + icon + '</span>' + (i + 1) + '. ' + q.q + '</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">';
+    for (var j = 0; j < q.opts.length; j++) {
+      var isCorrectOpt = j === q.correct;
+      var isChosen = j === a.chosen;
+      var bg = 'transparent'; var border = '#444'; var color = 'var(--text-dim)';
+      if (isCorrectOpt) { bg = 'rgba(126,184,160,0.15)'; border = 'var(--green)'; color = 'var(--green)'; }
+      if (isChosen && !a.wasCorrect) { bg = 'rgba(255,59,92,0.15)'; border = 'var(--red)'; color = 'var(--red)'; }
+      html += '<span style="padding:4px 10px;border:1px solid ' + border + ';border-radius:4px;font-size:13px;background:' + bg + ';color:' + color + ';">' + q.opts[j];
+      if (isCorrectOpt) html += ' \u2713';
+      if (isChosen && !a.wasCorrect) html += ' (your answer)';
+      html += '</span>';
+    }
+    if (a.timedOut && !a.wasCorrect) {
+      html += '<span style="padding:4px 10px;font-size:13px;color:var(--ember);">Time ran out</span>';
+    }
+    html += '</div>';
+    html += '<div style="font-size:13px;color:var(--text-dim);line-height:1.4;">' + q.explain + '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+
+  var review = document.getElementById('speedReview');
+  review.innerHTML = html;
+  review.style.display = 'block';
   document.getElementById('speedStartBtn').style.display = 'inline-block';
-  document.getElementById('speedStartBtn').textContent = 'Try Again';
+  document.getElementById('speedStartBtn').textContent = 'Try Again (New Questions)';
 }
 
 // === Slide 17: Final Quiz ===

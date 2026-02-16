@@ -593,16 +593,46 @@
     <div class="box-label">HEAD</div>
     <strong>HEAD</strong> is git's way of knowing "which branch am I currently working on?" It is a marker that points to your current branch. When you make a new commit, it gets added to whichever branch HEAD is pointing at. So: HEAD tells git your current branch, and the branch tells git your latest commit.
   </div>
+
+  <div class="box analogy" style="margin-top:16px;">
+    <div class="box-label">What's next</div>
+    Now main and feature have <strong>diverged</strong> &mdash; they each have commits the other doesn't. How do we bring them back together? That's <strong>merging</strong>, and it's the next section.
+  </div>
 </div>
 
-<!-- ===== SLIDE 6: Merge Conflicts (Interactive Editor) ===== -->
+<!-- ===== SLIDE 6: Merging ===== -->
 <div class="slide" id="s6">
-  <h2>6. Merge Conflicts</h2>
-  <p>When you try to combine two branches (<strong>merging</strong>), git usually handles it automatically. But if both branches changed <em>the same line</em> in the same file, git doesn't know which version to keep. This is called a <strong>merge conflict</strong>.</p>
+  <h2>6. Merging &mdash; Bringing Branches Together</h2>
+  <p>Remember where we left off? Main and feature have diverged &mdash; each has commits the other doesn't. <strong>Merging</strong> is how you combine them back into one branch. Click the steps to see how it works:</p>
+
+  <div class="git-graph" id="mergeGraph">
+    <svg viewBox="0 0 800 200" id="mergeSvg"></svg>
+  </div>
+
+  <div class="cmd-buttons" id="mergeBtns">
+    <button class="cmd-btn" id="mg-0" onclick="mgStep(0)"><span class="cmd-step">1</span>Where we left off</button>
+    <button class="cmd-btn" id="mg-1" onclick="mgStep(1)" disabled><span class="cmd-step">2</span>git checkout main</button>
+    <button class="cmd-btn" id="mg-2" onclick="mgStep(2)" disabled><span class="cmd-step">3</span>git merge feature</button>
+  </div>
+
+  <div id="mgExplain" style="margin-top:12px;font-size:14px;">
+    <p class="dim">Click step 1 to begin.</p>
+  </div>
+
+  <div class="box insight" id="mgInsight" style="margin-top:16px;display:none;">
+    <div class="box-label">The merge commit</div>
+    A merge commit is special &mdash; it has <strong>two parents</strong> instead of one. It points back to both the last commit on main (F) AND the last commit on feature (D). This is how git records that two lines of history were combined. No code is lost &mdash; the full history of both branches is preserved.
+  </div>
+
+  <h3 style="margin-top:28px;">But what if there's a conflict?</h3>
+  <p>Most of the time, git merges automatically &mdash; if the two branches edited <em>different files</em> (or different parts of the same file), git combines them with no problem. But if both branches changed <strong>the same line</strong> in the same file, git can't decide which version to keep. This is a <strong>merge conflict</strong>.</p>
 
   <div class="box warning">
     <div class="box-label">The scenario</div>
-    You ran <code>git merge feature</code> to combine the "feature" branch into "main." Both branches edited line 3 of the file <code>auth.py</code>. Git inserted special markers (<code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>) to show you both versions. The text between <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> and <code>=======</code> is YOUR version. The text between <code>=======</code> and <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature</code> is the OTHER branch's version. Your job: edit the file below to keep the code you want and <strong>delete all the marker lines</strong>.
+    You ran <code>git merge feature</code>. Both branches edited line 3 of <code>auth.py</code>. Git inserted special markers to show you both versions:<br><br>
+    &bull; The text between <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> and <code>=======</code> is <strong>your branch's version</strong><br>
+    &bull; The text between <code>=======</code> and <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature</code> is the <strong>other branch's version</strong><br><br>
+    Your job: edit the file to keep the code you want and <strong>delete all the marker lines</strong>.
   </div>
 
   <h3>Edit the file to resolve the conflict:</h3>
@@ -626,7 +656,7 @@
 
   <div class="box insight" style="margin-top:16px;">
     <div class="box-label">Key insight</div>
-    Conflict markers are just text: <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>. Remove them, keep the code you want (or combine both), then <code>git add</code> and <code>git commit</code>. The merge is complete.
+    Conflict markers are just text: <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>. Remove them, keep the code you want (or combine both), then <code>git add auth.py</code> and <code>git commit</code>. The merge is complete.
   </div>
 </div>
 
@@ -1459,6 +1489,81 @@ function brStep(step) {
     'Someone committed F on main. Now main &rarr; F, feature &rarr; D. They share the common history (A&rarr;B&rarr;C) but each has its own latest work. To combine them, you would merge or rebase.'
   ];
   exp.innerHTML = '<p>' + msgs[step] + '</p>';
+}
+
+// === Slide 6: Merge Visualization ===
+let mgState = -1;
+
+function drawMerge(state) {
+  var svg = document.getElementById('mergeSvg');
+  var h = '';
+  var c = { main: '#7eb8a0', feat: '#ff6b35', merge: '#00f5ff', head: '#00f5ff' };
+  var ym = 80, yf = 140;
+
+  // Base nodes: A-B-C on main, D on feature, F on main (diverged state from slide 5)
+  var nodes = [
+    { id: 'A', x: 80, y: ym },
+    { id: 'B', x: 180, y: ym },
+    { id: 'C', x: 280, y: ym },
+    { id: 'D', x: 400, y: yf, br: 'feat' },
+    { id: 'F', x: 400, y: ym }
+  ];
+
+  // Lines: A-B, B-C, C-D (feature), C-F (main)
+  h += '<line x1="80" y1="' + ym + '" x2="180" y2="' + ym + '" stroke="' + c.main + '" stroke-width="2" opacity="0.5"/>';
+  h += '<line x1="180" y1="' + ym + '" x2="280" y2="' + ym + '" stroke="' + c.main + '" stroke-width="2" opacity="0.5"/>';
+  h += '<line x1="280" y1="' + ym + '" x2="400" y2="' + yf + '" stroke="' + c.feat + '" stroke-width="2" opacity="0.5"/>';
+  h += '<line x1="280" y1="' + ym + '" x2="400" y2="' + ym + '" stroke="' + c.main + '" stroke-width="2" opacity="0.5"/>';
+
+  // Merge commit G
+  if (state >= 2) {
+    nodes.push({ id: 'G', x: 540, y: ym, br: 'merge' });
+    h += '<line x1="400" y1="' + ym + '" x2="540" y2="' + ym + '" stroke="' + c.merge + '" stroke-width="2" opacity="0.5"/>';
+    h += '<line x1="400" y1="' + yf + '" x2="540" y2="' + ym + '" stroke="' + c.merge + '" stroke-width="2" opacity="0.5" stroke-dasharray="6,3"/>';
+  }
+
+  // Draw nodes
+  nodes.forEach(function(n) {
+    var col = n.br === 'feat' ? c.feat : n.br === 'merge' ? c.merge : c.main;
+    h += '<circle cx="' + n.x + '" cy="' + n.y + '" r="18" fill="' + col + '" opacity="0.2" stroke="' + col + '" stroke-width="2"/>';
+    h += '<text x="' + n.x + '" y="' + (n.y + 5) + '" text-anchor="middle" fill="white" font-family="SF Mono,monospace" font-size="14" font-weight="bold">' + n.id + '</text>';
+  });
+
+  // Labels
+  var mainTip = state >= 2 ? 540 : 400;
+  h += '<text x="' + mainTip + '" y="' + (ym - 30) + '" text-anchor="middle" fill="' + c.main + '" font-family="SF Mono,monospace" font-size="12" font-weight="bold">main</text>';
+  h += '<text x="400" y="' + (yf + 40) + '" text-anchor="middle" fill="' + c.feat + '" font-family="SF Mono,monospace" font-size="12" font-weight="bold">feature</text>';
+
+  // HEAD label
+  if (state >= 1) {
+    h += '<text x="' + (mainTip + 40) + '" y="' + (ym + 5) + '" fill="' + c.head + '" font-family="SF Mono,monospace" font-size="11">HEAD</text>';
+  }
+
+  // Two-parent annotation
+  if (state >= 2) {
+    h += '<text x="540" y="' + (ym + 40) + '" text-anchor="middle" fill="' + c.merge + '" font-family="SF Mono,monospace" font-size="10">two parents!</text>';
+  }
+
+  svg.innerHTML = h;
+}
+
+function mgStep(step) {
+  if (step !== mgState + 1) return;
+  mgState = step;
+  document.getElementById('mg-' + step).classList.add('done');
+  if (step < 2) document.getElementById('mg-' + (step + 1)).disabled = false;
+  drawMerge(step);
+  addScore();
+  var exp = document.getElementById('mgExplain');
+  var msgs = [
+    'Here are our two branches from the previous section. <strong style="color:#7eb8a0;">main</strong> has commits A&rarr;B&rarr;C&rarr;F. <strong style="color:#ff6b35;">feature</strong> branched off at C and has commit D. They have diverged.',
+    'First, switch to the branch you want to merge INTO: <code>git checkout main</code>. HEAD now points to main. This is where the merge result will land.',
+    'Running <code>git merge feature</code> creates a new <strong style="color:#00f5ff;">merge commit G</strong>. Notice it has <strong>two parents</strong> &mdash; it points back to both F (main) and D (feature). Git combined the changes from both branches into G. The dashed line shows the second parent link.'
+  ];
+  exp.innerHTML = '<p>' + msgs[step] + '</p>';
+  if (step === 2) {
+    document.getElementById('mgInsight').style.display = 'block';
+  }
 }
 
 // === Slide 6: Merge Conflict Editor ===

@@ -984,19 +984,27 @@
 
 <!-- ===== SLIDE 14: Git Bisect (Binary Search Detective) ===== -->
 <div class="slide" id="s14">
-  <h2>14. Git Bisect &mdash; Find the Bug</h2>
-  <p>Imagine your project has 8 saved versions (commits) and somewhere along the way a bug appeared. You could check every single version one by one &mdash; but that's slow. <strong>Git bisect</strong> is smarter: it uses a "split in half" strategy. It checks the middle version first, then narrows down to the half that contains the bug, checks the middle of THAT, and so on. This way, even with 8 commits, you find the bug in just 3 steps instead of 8.</p>
+  <h2>14. Git Bisect &mdash; Bug Detective</h2>
+  <p>Your todo app's <strong>delete button is broken</strong>. Users can't remove items anymore. You know it worked a week ago but it's broken now. Somewhere in the last 8 commits, someone broke it. You could check every commit one by one &mdash; or use <strong>git bisect</strong>, which finds the broken commit in just 3 steps by splitting the search in half each time.</p>
 
   <div class="box warning">
     <div class="box-label">The mission</div>
-    Commit 1 was good (no bug). Commit 8 is bad (has the bug). Bisect will pick a commit in the middle for you to test. <strong>Mark it as good or bad</strong>, and bisect will narrow down the search. Find the commit that introduced the bug!
+    Bisect picks a commit for you. <strong>Run the tests</strong> to see if delete works at that point. Then tell bisect: good (tests pass) or bad (tests fail). Find the guilty commit!
   </div>
 
   <div class="bisect-commits" id="bisectCommits"></div>
 
-  <div style="margin-top:12px;display:flex;gap:8px;">
-    <button class="cmd-btn" id="bisectGood" onclick="bisectMark('good')" style="padding:8px 16px;color:var(--green);border-color:var(--green);" disabled>Mark Good</button>
-    <button class="cmd-btn" id="bisectBad" onclick="bisectMark('bad')" style="padding:8px 16px;color:var(--red);border-color:var(--red);" disabled>Mark Bad</button>
+  <div id="bisectTestArea" style="display:none;margin-top:12px;">
+    <div style="background:#0d1117;border:1px solid #333;border-radius:6px;padding:12px;font-family:'SF Mono',Consolas,monospace;font-size:13px;">
+      <div style="color:var(--text-dim);margin-bottom:8px;">$ npm test</div>
+      <div id="bisectTestOutput"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+    <button class="cmd-btn" id="bisectRunBtn" onclick="bisectRunTests()" style="padding:8px 16px;color:var(--cyan);border-color:var(--cyan);" disabled>Run Tests</button>
+    <button class="cmd-btn" id="bisectGood" onclick="bisectMark('good')" style="padding:8px 16px;color:var(--green);border-color:var(--green);display:none;">git bisect good</button>
+    <button class="cmd-btn" id="bisectBad" onclick="bisectMark('bad')" style="padding:8px 16px;color:var(--red);border-color:var(--red);display:none;">git bisect bad</button>
     <button class="cmd-btn" onclick="bisectReset()" style="padding:8px 16px;color:var(--text-dim);">Reset</button>
   </div>
 
@@ -2126,25 +2134,34 @@ function prStep(step) {
 }
 
 // === Slide 14: Git Bisect ===
-const BISECT_BUG = 5; // Commit 5 introduced the bug (0-indexed: index 4)
-let bisectLow = 0, bisectHigh = 7, bisectCurrent = -1, bisectDone = false, bisectStepCount = 0;
+var bisectCommits = [
+  { hash: 'a1b2c3d', msg: 'Initial todo app setup', label: 'Setup' },
+  { hash: 'e4f5a6b', msg: 'Add user authentication', label: 'Auth' },
+  { hash: 'c7d8e9f', msg: 'Style improvements', label: 'Styles' },
+  { hash: 'b2c3d4e', msg: 'Add search functionality', label: 'Search' },
+  { hash: 'f5a6b7c', msg: 'Refactor event handlers', label: 'Refactor' },
+  { hash: 'd8e9f0a', msg: 'Add category labels', label: 'Categories' },
+  { hash: 'a1b2c3e', msg: 'Performance improvements', label: 'Perf' },
+  { hash: 'e4f5a6c', msg: 'Add dark mode', label: 'Dark mode' }
+];
+var BISECT_BUG = 4; // index 4 ("Refactor event handlers") introduced the bug
+var bisectLow = 0, bisectHigh = 7, bisectCurrent = -1, bisectDone = false, bisectStepCount = 0, bisectTestedCurrent = false;
 
 function buildBisect() {
-  const container = document.getElementById('bisectCommits');
+  var container = document.getElementById('bisectCommits');
   container.innerHTML = '';
-  for (let i = 0; i < 8; i++) {
-    const div = document.createElement('div');
+  for (var i = 0; i < 8; i++) {
+    var div = document.createElement('div');
     div.className = 'bisect-commit';
     div.id = 'bisect-' + i;
-    div.innerHTML = '<div style="font-weight:700;">#' + (i + 1) + '</div><div style="font-size:10px;color:var(--text-dim);">' + ['Setup', 'Auth', 'DB', 'API', 'Cache', 'Search', 'UI', 'Deploy'][i] + '</div>';
-    div.onclick = () => bisectSelect(i);
+    div.innerHTML = '<div style="font-weight:700;">#' + (i + 1) + '</div><div style="font-size:10px;color:var(--text-dim);">' + bisectCommits[i].label + '</div>';
     container.appendChild(div);
   }
-  // Mark initial known states
   document.getElementById('bisect-0').classList.add('good');
   document.getElementById('bisect-7').classList.add('bad');
   bisectLow = 0;
   bisectHigh = 7;
+  bisectTestedCurrent = false;
   bisectNext();
 }
 
@@ -2152,43 +2169,84 @@ function bisectNext() {
   if (bisectLow + 1 >= bisectHigh) {
     bisectDone = true;
     document.getElementById('bisect-' + bisectHigh).classList.add('found');
-    document.getElementById('bisectFeedback').innerHTML = '<span style="color:var(--green);">Found it!</span> Commit #' + (bisectHigh + 1) + ' introduced the bug. Found in <strong>' + bisectStepCount + ' steps</strong> instead of checking all 8 &mdash; that is the power of splitting in half each time!';
-    document.getElementById('bisectGood').disabled = true;
-    document.getElementById('bisectBad').disabled = true;
+    document.getElementById('bisectGood').style.display = 'none';
+    document.getElementById('bisectBad').style.display = 'none';
+    document.getElementById('bisectRunBtn').disabled = true;
+    var c = bisectCommits[bisectHigh];
+    document.getElementById('bisectFeedback').innerHTML = '<span style="color:var(--green);">Found it!</span> Commit #' + (bisectHigh + 1) + ' (<code>' + c.hash.substring(0,7) + '</code> &mdash; ' + c.msg + ') introduced the bug in <strong>' + bisectStepCount + ' steps</strong> instead of checking all 8.';
+    document.getElementById('bisectTestArea').style.display = 'block';
+    document.getElementById('bisectTestOutput').innerHTML = '<div style="color:var(--text-dim);margin-bottom:8px;">The guilty diff:</div>' +
+      '<div style="color:var(--red);">- btn.onclick = () => deleteTodo(item.id);</div>' +
+      '<div style="color:var(--green);">+ btn.onclick = () => deleteTodo();</div>' +
+      '<div style="color:var(--text-dim);margin-top:8px;">The refactor accidentally dropped the <code style="color:var(--cyan);">item.id</code> argument. Delete was called with no ID, so nothing got removed.</div>';
     addScore(3);
     return;
   }
   bisectCurrent = Math.floor((bisectLow + bisectHigh) / 2);
-  document.querySelectorAll('.bisect-commit.current').forEach(c => c.classList.remove('current'));
+  bisectTestedCurrent = false;
+  document.querySelectorAll('.bisect-commit.current').forEach(function(c) { c.classList.remove('current'); });
   document.getElementById('bisect-' + bisectCurrent).classList.add('current');
-  document.getElementById('bisectGood').disabled = false;
-  document.getElementById('bisectBad').disabled = false;
-  document.getElementById('bisectFeedback').innerHTML = 'Testing commit <strong>#' + (bisectCurrent + 1) + '</strong>. Is it good or bad?';
-  document.getElementById('bisectSteps').textContent = 'Steps taken: ' + bisectStepCount + ' | Range: #' + (bisectLow + 1) + ' to #' + (bisectHigh + 1);
+  document.getElementById('bisectRunBtn').disabled = false;
+  document.getElementById('bisectGood').style.display = 'none';
+  document.getElementById('bisectBad').style.display = 'none';
+  document.getElementById('bisectTestArea').style.display = 'none';
+  var c = bisectCommits[bisectCurrent];
+  document.getElementById('bisectFeedback').innerHTML = 'Bisect picked commit <strong>#' + (bisectCurrent + 1) + '</strong> (<code>' + c.hash.substring(0,7) + '</code> &mdash; ' + c.msg + '). Run the tests to see if delete works here.';
+  document.getElementById('bisectSteps').textContent = 'Steps: ' + bisectStepCount + ' | Searching between #' + (bisectLow + 1) + ' and #' + (bisectHigh + 1);
 }
 
-function bisectSelect(i) {
+function bisectRunTests() {
   if (bisectDone || bisectCurrent === -1) return;
+  var isBuggy = bisectCurrent >= BISECT_BUG;
+  var area = document.getElementById('bisectTestArea');
+  var output = document.getElementById('bisectTestOutput');
+  area.style.display = 'block';
+  output.innerHTML = '<div style="color:var(--text-dim);">Running 4 tests...</div>';
+  setTimeout(function() {
+    var lines = '';
+    lines += '<div style="color:var(--green);">  \u2713 add todo &mdash; adds item to list</div>';
+    lines += '<div style="color:var(--green);">  \u2713 toggle todo &mdash; marks item complete</div>';
+    if (isBuggy) {
+      lines += '<div style="color:var(--red);">  \u2717 delete todo &mdash; Expected list length 0, got 1</div>';
+    } else {
+      lines += '<div style="color:var(--green);">  \u2713 delete todo &mdash; removes item from list</div>';
+    }
+    lines += '<div style="color:var(--green);">  \u2713 search &mdash; filters items by keyword</div>';
+    lines += '<div style="margin-top:8px;">';
+    if (isBuggy) {
+      lines += '<span style="color:var(--red);">1 failing</span>, 3 passing';
+    } else {
+      lines += '<span style="color:var(--green);">4 passing</span>';
+    }
+    lines += '</div>';
+    output.innerHTML = lines;
+    bisectTestedCurrent = true;
+    document.getElementById('bisectGood').style.display = '';
+    document.getElementById('bisectBad').style.display = '';
+    document.getElementById('bisectFeedback').innerHTML = 'Tests are done. Based on the results, is this commit <strong>good</strong> (delete works) or <strong>bad</strong> (delete broken)?';
+  }, 600);
 }
 
 function bisectMark(verdict) {
   if (bisectDone || bisectCurrent === -1) return;
+  if (!bisectTestedCurrent) {
+    document.getElementById('bisectFeedback').innerHTML = '<span style="color:var(--ember);">Run the tests first!</span> You need evidence before marking a commit.';
+    return;
+  }
+  var isBuggy = bisectCurrent >= BISECT_BUG;
+  if (verdict === 'good' && isBuggy) {
+    document.getElementById('bisectFeedback').innerHTML = '<span style="color:var(--red);">Look at the test output again</span> &mdash; the delete test is failing. This commit is bad.';
+    return;
+  }
+  if (verdict === 'bad' && !isBuggy) {
+    document.getElementById('bisectFeedback').innerHTML = '<span style="color:var(--red);">Look at the test output again</span> &mdash; all tests pass. This commit is good.';
+    return;
+  }
   bisectStepCount++;
-  const isBuggy = (bisectCurrent + 1) >= BISECT_BUG;
   if (verdict === 'good') {
-    if (isBuggy) {
-      document.getElementById('bisectFeedback').innerHTML = '<span style="color:var(--red);">Hmm, this commit actually has the bug!</span> Tests are failing. Try marking it as bad.';
-      bisectStepCount--;
-      return;
-    }
     document.getElementById('bisect-' + bisectCurrent).classList.add('good');
     bisectLow = bisectCurrent;
   } else {
-    if (!isBuggy) {
-      document.getElementById('bisectFeedback').innerHTML = '<span style="color:var(--red);">This commit is actually fine!</span> Tests pass. Try marking it as good.';
-      bisectStepCount--;
-      return;
-    }
     document.getElementById('bisect-' + bisectCurrent).classList.add('bad');
     bisectHigh = bisectCurrent;
   }
@@ -2196,10 +2254,13 @@ function bisectMark(verdict) {
 }
 
 function bisectReset() {
-  bisectLow = 0; bisectHigh = 7; bisectCurrent = -1; bisectDone = false; bisectStepCount = 0;
+  bisectLow = 0; bisectHigh = 7; bisectCurrent = -1; bisectDone = false; bisectStepCount = 0; bisectTestedCurrent = false;
   buildBisect();
   document.getElementById('bisectFeedback').innerHTML = '';
   document.getElementById('bisectSteps').textContent = '';
+  document.getElementById('bisectTestArea').style.display = 'none';
+  document.getElementById('bisectGood').style.display = 'none';
+  document.getElementById('bisectBad').style.display = 'none';
 }
 
 // === Slide 15: Pipeline ===
